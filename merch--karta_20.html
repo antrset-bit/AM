@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Правовая карта · Модель работы с мерчем</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#16243F; --ink-soft:#52607C; --line:#D8DEE6; --line-soft:#E8ECF1;
+    --paper:#E9EDF2; --card:#FFFFFF;
+    --tavrida:#0E6E63; --tavrida-bg:#E2F1EE;
+    --contra:#B26B17;  --contra-bg:#F6EBDA;
+    --both:#6B4FA0;    --both-bg:#ECE6F5;
+    --seal:#9C6B1E; --seal-deep:#7A5215; --ok:#1E7A52; --warn:#B23B2E;
+    --r:14px; --shadow:0 1px 2px rgba(22,36,63,.06), 0 8px 28px rgba(22,36,63,.07);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth; height:100%}
+  body{margin:0; background:var(--paper); color:var(--ink);
+    font-family:"Onest",system-ui,sans-serif; line-height:1.55; -webkit-font-smoothing:antialiased; font-size:16px;
+    height:100%; overflow:hidden;}
+  .wrap{max-width:1340px; margin:0 auto; padding:0 24px; height:100vh; height:100dvh; display:flex; flex-direction:column; overflow:hidden}
+
+  header{padding:22px 0 10px; flex:none}
+  .brand{display:flex; align-items:center; gap:14px}
+  .logo{height:46px; width:auto; max-width:120px; border-radius:9px; border:1px solid var(--line); background:#fff; object-fit:contain; flex:none}
+  .logo-fallback{height:46px; min-width:46px; padding:0 12px; border-radius:9px; border:1px solid var(--line); background:var(--ink); color:#fff; display:none; align-items:center; justify-content:center; font-family:"Unbounded",sans-serif; font-weight:700; font-size:16px; letter-spacing:.04em; flex:none}
+  h1{font-family:"Unbounded",sans-serif; font-weight:800; letter-spacing:-.01em; font-size:clamp(30px,5.4vw,52px); line-height:1.02; margin:0;}
+
+  .sec{padding:8px 0 0}
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:6px}
+  .sec h2{font-family:"Unbounded",sans-serif; font-weight:600; font-size:clamp(20px,3.2vw,28px); margin:0; letter-spacing:-.01em}
+  .sec-head p{margin:5px 0 0; color:var(--ink-soft); font-size:14.5px}
+
+  /* ============ TABS / PAGES ============ */
+  .tabs{display:flex;gap:4px;flex-wrap:wrap;margin:8px 0 0;border-bottom:1px solid var(--line);flex:none}
+  .tab{background:none;border:none;border-bottom:2px solid transparent;padding:13px 19px;font:inherit;font-size:16px;color:var(--ink-soft);cursor:pointer;font-weight:600;margin-bottom:-1px;transition:.15s}
+  .tab:hover{color:var(--ink)}
+  .tab.active{color:var(--ink);border-bottom-color:var(--tavrida)}
+  .tab:focus-visible{outline:3px solid #B9D4D0;outline-offset:2px;border-radius:6px}
+  .page{display:none;flex:1;min-height:0}
+  .page.active{display:flex;flex-direction:column;animation:fade .25s ease both}
+  /* Карта и Финансы — помещаются в экран без прокрутки страницы */
+  #map.active,#finance.active{overflow:hidden}
+  /* Сценарии и Право — можно прокручивать */
+  #scenarios.active,#basis.active,#matrix.active{overflow-y:auto;overflow-x:auto;padding-bottom:24px}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* ============ STEPPER ============ */
+  #map .stepper{flex:none}
+  #map .stage{flex:1;min-height:0;overflow-y:auto;padding-right:2px}
+  #map .stepnav{flex:none}
+  .stepper{display:flex;gap:8px;margin:14px 0 14px;flex-wrap:wrap}
+  .st{display:flex;align-items:center;gap:9px;font-size:14.5px;color:var(--ink-soft);padding:10px 17px;border:1px solid var(--line);border-radius:999px;background:var(--card);transition:.18s}
+  .st .sd{width:24px;height:24px;border-radius:50%;border:1.5px solid var(--line);display:grid;place-items:center;font-size:12.5px;font-family:"JetBrains Mono",monospace;flex:none}
+  .st.done{color:var(--tavrida);border-color:var(--tavrida)} .st.done .sd{background:var(--tavrida);border-color:var(--tavrida);color:#fff}
+  .st.active{color:var(--ink);border-color:var(--ink)} .st.active .sd{border-color:var(--tavrida);color:var(--tavrida)}
+  .step{display:none}
+  .step.on{display:block;animation:fade .25s ease both}
+  .stepnav{display:flex;gap:10px;margin-top:14px}
+
+  /* ============ MAP / TREES ============ */
+  .maptools{display:flex;gap:10px;align-items:center;margin:18px 0 6px;flex-wrap:wrap}
+  .hint{font-size:13px;color:var(--ink-soft);display:inline-flex;align-items:center;gap:8px}
+  .btn-ghost{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 17px;font:inherit;font-size:14.5px;color:var(--ink-soft);cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.15s}
+  .btn-ghost:hover{border-color:var(--ink-soft);color:var(--ink)}
+  .btn-ghost:disabled{opacity:.4;cursor:default}
+
+  .qmap{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);margin-top:14px;overflow:hidden}
+  .qmap-head{display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid var(--line-soft)}
+  .qmap-head .qn{font-family:"Unbounded",sans-serif;font-weight:600;font-size:16px;width:36px;height:36px;border-radius:10px;background:var(--ink);color:#fff;display:grid;place-items:center;flex:none}
+  .qmap-head .qt{font-weight:600;font-size:17.5px}
+  .qmap-head .qpick{margin-left:auto;font-size:13.5px;font-family:"JetBrains Mono",monospace;color:var(--ink-soft);display:inline-flex;align-items:center;gap:7px}
+  .qmap-head .qpick.set{color:var(--tavrida)}
+  .scroll{overflow-x:auto;padding:6px 10px 18px}
+
+  .tree{display:inline-block;min-width:100%;position:relative;text-align:center;padding:16px 6px 6px}
+  .tree ul{display:flex;justify-content:center;gap:16px;padding:0;margin:0;list-style:none}
+  .tree li{display:flex;flex-direction:column;align-items:center;list-style:none}
+  .tree li > ul{margin-top:38px}
+  svg.links{position:absolute;inset:0;pointer-events:none;z-index:0;overflow:visible}
+
+  .node{display:inline-flex;flex-direction:column;align-items:center;gap:4px;position:relative;z-index:1;
+    padding:14px 20px;border-radius:12px;min-width:140px;max-width:230px;transition:.16s;background:#fff}
+  .node .ntag{font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:5px;font-weight:600}
+  .node .nlabel{font-weight:600;font-size:15px;line-height:1.25}
+  .node .nsub{font-size:12.5px;color:var(--ink-soft);line-height:1.25}
+  .ntag.t{background:var(--tavrida-bg);color:var(--tavrida)} .ntag.c{background:var(--contra-bg);color:var(--contra)} .ntag.b{background:var(--both-bg);color:var(--both)} .ntag.q{background:#EEF1F5;color:var(--ink-soft)}
+
+  .node.q{border:1.5px dashed var(--line);color:var(--ink);background:#FBFCFD}
+  .node.q .nlabel{font-weight:600}
+  .node.root{border:1.5px solid var(--ink);background:var(--ink);color:#fff}
+  .node.root .nlabel{color:#fff}
+  .node.branch{border:1.5px solid var(--line)}
+  .node.branch.t{border-color:#BFE0DA} .node.branch.c{border-color:#E8D2B0} .node.branch.b{border-color:#D6CBEC}
+  .node.leaf{cursor:pointer;border:1.5px solid var(--line);box-shadow:0 1px 1px rgba(22,36,63,.04)}
+  .node.leaf::after{content:"Выбрать";font-family:"JetBrains Mono",monospace;font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);margin-top:3px;opacity:.7;transition:.16s}
+  .node.leaf:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+  .node.leaf.t:hover{border-color:var(--tavrida)} .node.leaf.c:hover{border-color:var(--contra)} .node.leaf.b:hover{border-color:var(--both)}
+  .node.leaf:focus-visible{outline:3px solid #B9D4D0;outline-offset:2px}
+  .node.leaf.sel{box-shadow:0 6px 20px rgba(22,36,63,.14)}
+  .node.leaf.sel.t{background:var(--tavrida-bg);border-color:var(--tavrida)}
+  .node.leaf.sel.c{background:var(--contra-bg);border-color:var(--contra)}
+  .node.leaf.sel.b{background:var(--both-bg);border-color:var(--both)}
+  .node.leaf.sel::after{content:"✓ Выбрано";color:var(--ink);opacity:1;font-weight:600}
+  .node.dim{opacity:.34;filter:saturate(.5)}
+  .node.on{opacity:1;filter:none}
+  .node.leaf.disabled{opacity:.3;cursor:not-allowed;filter:grayscale(.5);box-shadow:none}
+  .node.leaf.disabled:hover{transform:none;box-shadow:none;border-color:var(--line)}
+  .node.leaf.disabled::after{content:"Недоступно при этом владельце тиража";color:var(--ink-soft);opacity:.8}
+
+  /* ============ RESULT ============ */
+  #result{margin-top:6px}
+
+  .verdict{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:hidden}
+  .vtop{padding:22px 28px;border-bottom:1px solid var(--line-soft);display:flex;gap:20px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+  .vtop .vmeta{flex:1;min-width:260px}
+  .vlabel{font-family:"JetBrains Mono",monospace;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--seal);margin:0 0 8px}
+  #vmodel{font-family:"Unbounded",sans-serif;font-weight:700;font-size:clamp(22px,3vw,28px);margin:0 0 9px;line-height:1.1;letter-spacing:-.01em}
+  .vrole{display:inline-flex;align-items:center;gap:9px;font-size:15px;color:var(--ink-soft)}
+  .vrole b{color:var(--ink);font-weight:600}
+  .vincome{display:inline-flex;align-items:flex-start;gap:9px;margin-top:11px;padding:11px 15px;border-radius:11px;
+    background:var(--tavrida-bg);color:var(--tavrida);font-size:14.5px;line-height:1.4}
+  .vincome svg{flex:none;margin-top:2px}
+  .vincome b{color:var(--ink);font-weight:600}
+  .seal{width:96px;height:96px;flex:none}
+  .seal svg{width:100%;height:100%;animation:stamp .5s cubic-bezier(.2,1.4,.5,1) both}
+  @keyframes stamp{from{opacity:0;transform:scale(1.5) rotate(-18deg)}to{opacity:1;transform:scale(1) rotate(-9deg)}}
+  .vgrid{display:grid;gap:0}
+  @media(min-width:980px){.vgrid{grid-template-columns:1.1fr 0.82fr 1.02fr}}
+  .vcol{padding:22px 26px;min-width:0}
+  .vcol+.vcol{border-top:1px solid var(--line-soft)}
+  @media(min-width:980px){.vcol+.vcol{border-top:none;border-left:1px solid var(--line-soft)}}
+  .vcol-notes{background:#FBF6EC}
+  .vh{font-family:"JetBrains Mono",monospace;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-soft);margin:0 0 15px}
+  .docs{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+  .docs li{display:flex;gap:11px;align-items:flex-start;font-size:15px;line-height:1.35}
+  .docs li .ck{width:22px;height:22px;border-radius:6px;background:var(--tavrida-bg);color:var(--tavrida);display:grid;place-items:center;flex:none;margin-top:1px}
+  .docs li .ck svg{width:13px;height:13px}
+  .docs li .dx{flex:1;min-width:0}
+  .docs li .da{font-family:"JetBrains Mono",monospace;font-size:12px;color:var(--ink-soft);display:block;margin-top:3px}
+  .docs li .dp{display:inline-flex;align-items:flex-start;gap:6px;margin-top:6px;padding:5px 10px;border-radius:7px;
+    background:#F4F7FA;border:1px solid var(--line-soft);font-size:12.5px;color:var(--ink);line-height:1.3}
+  .docs li .dp svg{flex:none;color:var(--tavrida);margin-top:1px}
+  .meters{display:flex;flex-direction:column;gap:14px;margin-bottom:10px}
+  .vcaption{font-size:11px;color:var(--ink-soft);font-style:italic;margin:0 0 16px;line-height:1.35}
+  .meter .ml{display:flex;justify-content:space-between;font-size:14px;margin-bottom:6px}
+  .meter .ml b{font-weight:600}
+  .track{height:8px;background:var(--line-soft);border-radius:99px;overflow:hidden}
+  .track i{display:block;height:100%;border-radius:99px;transition:width .6s ease}
+  .fin{background:#F8FAFB;border:1px solid var(--line-soft);border-radius:11px;padding:16px 18px}
+  .fin h4{margin:0 0 11px;font-size:12.5px;font-family:"JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft)}
+  .fin .row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:7px 0;border-bottom:1px dashed var(--line);font-size:14px}
+  .fin .row>span:first-child{flex:1;min-width:0}
+  .fin .row:last-child{border-bottom:none}
+  .fin .row .v{font-family:"JetBrains Mono",monospace;font-weight:600;white-space:nowrap;flex:none;text-align:right}
+  .fin .row.tot{margin-top:6px;padding-top:10px;border-top:2px solid var(--ink);border-bottom:none}
+  .fin .row.tot .v{color:var(--tavrida);font-size:17px}
+  .vnotes{display:flex;flex-direction:column;gap:12px}
+  .vnotes .note{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--seal-deep);line-height:1.4}
+  .vnotes .note+.note{margin-top:0}
+  .vnotes svg{flex:none;margin-top:1px;width:17px;height:17px}
+
+  /* ============ REFERENCE ============ */
+  .cards{display:grid;gap:14px}
+  @media(min-width:680px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .rcard{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:22px;box-shadow:var(--shadow);display:flex;flex-direction:column}
+  .rcard .rn{font-family:"Unbounded",sans-serif;font-weight:400;font-size:30px;color:var(--line);line-height:1;margin-bottom:6px}
+  .rcard h3{font-family:"Unbounded",sans-serif;font-weight:600;font-size:17px;margin:0 0 6px;letter-spacing:-.01em}
+  .rcard .rsub{font-size:13.5px;color:var(--ink-soft);margin:0 0 16px}
+  .rtags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+  .rtag{font-size:11px;font-family:"JetBrains Mono",monospace;padding:4px 9px;border-radius:6px;background:#F4F7FA;color:var(--ink-soft);border:1px solid var(--line-soft)}
+  .rtag b{color:var(--ink);font-weight:600}
+  .rdocs{list-style:none;margin:auto 0 0;padding:14px 0 0;border-top:1px solid var(--line-soft);font-size:13px;color:var(--ink-soft)}
+  .rdocs li{padding:2px 0 2px 16px;position:relative}
+  .rdocs li::before{content:"";position:absolute;left:0;top:9px;width:6px;height:6px;border-radius:50%;background:var(--tavrida)}
+  .rparties{margin-top:12px;padding-top:12px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--ink-soft);line-height:1.55}
+  .rparties .rh{font-family:"JetBrains Mono",monospace;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-soft);display:block;margin-bottom:5px}
+  .rparties div{margin:2px 0}
+  .rparties b{color:var(--ink);font-weight:600}
+
+  /* ============ FINANCE CALCULATOR ============ */
+  .calc{margin-top:16px;display:flex;flex-direction:column;gap:14px}
+  .calc-inputs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+  @media(min-width:620px){.calc-inputs{grid-template-columns:repeat(3,1fr)}}
+  @media(min-width:920px){.calc-inputs{grid-template-columns:repeat(6,1fr)}}
+  .calc-inputs label{display:flex;flex-direction:column;gap:5px;font-size:11.5px;color:var(--ink-soft);font-weight:600}
+  .calc-inputs input{font:inherit;font-size:14px;font-family:"JetBrains Mono",monospace;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--ink);width:100%;box-sizing:border-box}
+  .calc-inputs input:focus{outline:none;border-color:var(--tavrida);box-shadow:0 0 0 3px #B9D4D0}
+  .calc-tablewrap{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:auto}
+  .calc-table{border-collapse:collapse;width:100%;font-size:13.5px;min-width:520px}
+  .calc-table th,.calc-table td{padding:11px 14px;text-align:right;border-bottom:1px solid var(--line-soft);white-space:nowrap;vertical-align:top}
+  .calc-table th:first-child,.calc-table td:first-child{text-align:left}
+  .calc-table thead th{background:#F4F7FA;font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);font-weight:600}
+  .calc-table tbody tr:last-child td{border-bottom:none}
+  .calc-table .mname{font-weight:600}
+  .calc-table .net{font-family:"JetBrains Mono",monospace;font-weight:600}
+  .calc-table tr.best{background:var(--tavrida-bg)}
+  .calc-table tr.best .net{color:var(--tavrida)}
+  .calc-winner{background:var(--tavrida-bg);border:1px solid var(--tavrida);border-radius:10px;padding:12px 16px;font-size:14px;color:var(--ink)}
+  .calc-winner b{color:var(--tavrida)}
+  .calc-note{font-size:11.5px;color:var(--ink-soft);line-height:1.5;margin:0}
+
+  /* ============ MATRIX ============ */
+  .mtx-wrap{margin-top:16px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);overflow:auto}
+  .mtx-table{border-collapse:collapse;width:100%;font-size:13px;min-width:860px}
+  .mtx-table th,.mtx-table td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line-soft);vertical-align:top;line-height:1.35}
+  .mtx-table thead th{background:#F4F7FA;font-family:"JetBrains Mono",monospace;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-soft);font-weight:600;position:sticky;top:0}
+  .mtx-table tbody tr:last-child td{border-bottom:none}
+  .mtx-table tbody tr:hover{background:#F8FAFB}
+  .mtx-table .mx-num{font-family:"JetBrains Mono",monospace;color:var(--ink-soft)}
+  .mtx-table .mx-model{font-weight:600}
+  .mtx-table .mx-tag{display:inline-block;font-family:"JetBrains Mono",monospace;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px;background:var(--tavrida-bg);color:var(--tavrida);white-space:nowrap}
+  .mtx-table .mx-docs{font-family:"JetBrains Mono",monospace;font-weight:600;color:var(--tavrida);cursor:help;border-bottom:1px dotted var(--tavrida)}
+  .mtx-rowgroup td{border-top:2px solid var(--line)}
+
+  .gloss{display:grid;gap:12px}
+  @media(min-width:680px){.gloss{grid-template-columns:repeat(2,1fr)}}
+  .gitem{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+  .gitem h4{margin:0 0 4px;font-size:15.5px;font-weight:600;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .gitem .art{font-family:"JetBrains Mono",monospace;font-size:11.5px;color:var(--tavrida);font-weight:600}
+  .gitem p{margin:6px 0 0;font-size:13.5px;color:var(--ink-soft)}
+  .tmnote{margin-top:14px;background:#FBF6EC;border:1px solid #EAD9B8;border-radius:12px;padding:18px 20px;display:flex;gap:13px;align-items:flex-start}
+  .tmnote svg{flex:none;margin-top:2px}
+  .tmnote h4{margin:0 0 5px;font-size:15px;color:var(--seal-deep)}
+  .tmnote p{margin:0;font-size:13.5px;color:var(--seal-deep)}
+  .tmnote .art{font-family:"JetBrains Mono",monospace;font-weight:600}
+
+  footer{padding:8px 0 10px;color:var(--ink-soft);font-size:12px;text-align:center;flex:none}
+  footer b{color:var(--ink);font-weight:600}
+
+  /* ============ MOBILE / iPhone ============ */
+  /* На телефонах и планшетах — обычная вертикальная прокрутка вместо фиксированного экрана */
+  @media (max-width:980px){
+    .wrap{height:auto; min-height:100dvh; overflow:visible; padding-left:max(16px,env(safe-area-inset-left)); padding-right:max(16px,env(safe-area-inset-right))}
+    body{overflow-y:auto; -webkit-text-size-adjust:100%}
+    .page{flex:none}
+    .page.active{display:block}
+    #map.active,#finance.active,#scenarios.active,#basis.active,#matrix.active{overflow:visible}
+    #map .stage{flex:none; overflow:visible; padding-right:0}
+    .step.on{padding-bottom:6px}
+    .stepnav{position:sticky; bottom:0; background:var(--paper); padding:10px 0 max(10px,env(safe-area-inset-bottom)); margin-top:8px; z-index:5}
+    .calc-inputs input{font-size:16px} /* предотвращает авто-зум iOS при фокусе */
+  }
+  @media (max-width:560px){
+    header{padding:14px 0 6px}
+    h1{font-size:25px}
+    .logo{height:40px}
+    .tabs{gap:0}
+    .tab{padding:11px 12px; font-size:14px}
+    .seal{display:none}
+    .vtop{padding:18px 18px}
+    .vcol{padding:18px 18px}
+    .vincome{font-size:13.5px}
+    .docs li{font-size:14.5px}
+    .qmap-head{padding:15px 16px}
+    .qmap-head .qt{font-size:16px}
+    .node{min-width:128px; padding:13px 16px}
+    .sec h2{font-size:22px}
+  }
+
+  @media print{
+    body{background:#fff}
+    .tabs,.stepper,.stepnav{display:none}
+    .page{display:block!important}
+    .step{display:block!important}
+    .scroll{overflow:visible}
+    .verdict,.rcard,.tablewrap,.gitem{box-shadow:none}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <img class="logo" src="https://fips.ru/Image/RUTMAP_Images/new2024/800000/800000/801000/2024801486-s.jpg" alt="Логотип" referrerpolicy="no-referrer" onerror="this.style.display='none';var f=this.nextElementSibling;if(f)f.style.display='inline-flex'">
+      <span class="logo-fallback" aria-hidden="true">AR</span>
+      <h1>Карта моделей работы с мерчем</h1>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist" aria-label="Разделы">
+    <button class="tab active" data-page="map" role="tab" aria-selected="true" id="tab-map" aria-controls="map">Карта</button>
+    <button class="tab" data-page="scenarios" role="tab" aria-selected="false" id="tab-scenarios" aria-controls="scenarios">Сценарии</button>
+    <button class="tab" data-page="matrix" role="tab" aria-selected="false" id="tab-matrix" aria-controls="matrix">Матрица</button>
+    <button class="tab" data-page="finance" role="tab" aria-selected="false" id="tab-finance" aria-controls="finance">Финансы</button>
+    <button class="tab" data-page="basis" role="tab" aria-selected="false" id="tab-basis" aria-controls="basis">Право</button>
+  </nav>
+
+  <!-- ===================== INTERACTIVE MAP ===================== -->
+  <section class="sec page active" id="map" role="tabpanel" aria-labelledby="tab-map" tabindex="0">
+    <div class="stepper" id="stepper">
+      <div class="st" data-i="0"><span class="sd">1</span>Права</div>
+      <div class="st" data-i="1"><span class="sd">2</span>Тираж</div>
+      <div class="st" data-i="2"><span class="sd">3</span>Продажи</div>
+      <div class="st" data-i="3"><span class="sd">✓</span>Заключение</div>
+    </div>
+
+    <div class="stage" id="stage">
+      <div class="qmap step on" data-step="0">
+        <div class="qmap-head"><span class="qn">1</span><span class="qt">Кому принадлежат права на дизайн?</span><span class="qpick" id="pick-q1">не выбрано</span></div>
+        <div class="scroll"><div class="tree" id="tree-q1"></div></div>
+      </div>
+      <div class="qmap step" data-step="1">
+        <div class="qmap-head"><span class="qn">2</span><span class="qt">Кто владеет готовым тиражом?</span><span class="qpick" id="pick-q2">не выбрано</span></div>
+        <div class="scroll"><div class="tree" id="tree-q2"></div></div>
+      </div>
+      <div class="qmap step" data-step="2">
+        <div class="qmap-head"><span class="qn">3</span><span class="qt">Кто продаёт мерч?</span><span class="qpick" id="pick-q3">не выбрано</span></div>
+        <div class="scroll"><div class="tree" id="tree-q3"></div></div>
+      </div>
+
+      <div class="step" data-step="3" id="result" aria-live="polite">
+        <div class="verdict">
+          <div class="vtop">
+            <div class="vmeta">
+              <p class="vlabel" id="vlabel">Заключение · рекомендуемая модель</p>
+              <h2 id="vmodel"></h2>
+              <span class="vrole">Роль Тавриды: <b id="vrole"></b></span>
+              <div class="vincome"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg><span>Доход — от: <b id="vincome"></b></span></div>
+            </div>
+            <div class="seal" aria-hidden="true">
+              <svg viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="55" fill="none" stroke="var(--seal)" stroke-width="2"/>
+                <circle cx="60" cy="60" r="46" fill="none" stroke="var(--seal)" stroke-width="1" stroke-dasharray="2 3"/>
+                <path id="sealArc" d="M60,16 a44,44 0 1,1 -0.1,0" fill="none"/>
+                <text fill="var(--seal-deep)" font-family="JetBrains Mono,monospace" font-size="9.5" letter-spacing="2"><textPath href="#sealArc" startOffset="2%">ARTALLRIGHTS STUDIO · ПРАВОВОЙ ОРИЕНТИР · </textPath></text>
+                <path d="M44 60 l11 11 l22 -24" fill="none" stroke="var(--seal)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+          </div>
+          <div class="vgrid">
+            <div class="vcol"><p class="vh">Пакет документов</p><ul class="docs" id="vdocs"></ul></div>
+            <div class="vcol"><p class="vh">Профиль · оценочно</p><div class="meters" id="vmeters"></div><p class="vcaption">Шкалы — субъективная оценка для ориентира, не нормативный показатель.</p><div class="fin" id="vfin"></div></div>
+            <div class="vcol vcol-notes"><p class="vh">Важные оговорки</p><div class="vnotes" id="vnotes"></div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stepnav">
+      <button class="btn-ghost" id="backStep">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg> Назад
+      </button>
+      <button class="btn-ghost" id="nextStep">
+        Далее <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+      </button>
+      <button class="btn-ghost" id="resetMap" style="margin-left:auto">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+        Сбросить
+      </button>
+    </div>
+  </section>
+
+  <!-- ===================== READY SCENARIOS ===================== -->
+  <section class="sec page" id="scenarios" role="tabpanel" aria-labelledby="tab-scenarios" tabindex="0">
+    <div class="sec-head"><div><h2>Готовые сценарии</h2><p>Типовые конфигурации — как справочник.</p></div></div>
+    <div class="cards" style="margin-top:18px">
+      <article class="rcard"><div class="rn">01</div><h3>Классический заказ мерча</h3><p class="rsub">Права в итоге у контрагента. Доход Тавриды — за разработку дизайна с отчуждением прав либо как агентское вознаграждение.</p><div class="rtags"><span class="rtag">Права: <b>контрагент</b></span><span class="rtag">Товар: <b>контрагент</b></span><span class="rtag">Доход: <b>дизайн / агент</b></span></div><ul class="rdocs"><li>А: договор с дизайнером + договор на производство дизайна с отчуждением прав контрагенту и продукции (2 этапа)</li><li>Б: агентский договор + договор с дизайнером + договор на производство (Таврида — агент)</li></ul><div class="rparties"><span class="rh">Стороны и роли</span><div>А: <b>Таврида</b> (подрядчик, отчуждает права) ↔ <b>Контрагент</b> (заказчик, приобретатель прав); <b>Таврида</b> (заказчик) ↔ <b>Дизайнер</b> (автор)</div><div>Б: <b>Таврида</b> (агент) ↔ <b>Контрагент</b> (принципал); <b>Таврида</b> (агент) ↔ <b>Дизайнер</b> / изготовитель</div></div></article>
+      <article class="rcard"><div class="rn">02</div><h3>Таврида сохраняет права на дизайн</h3><p class="rsub">Таврида создаёт дизайн и сама изготавливает брендированную продукцию для контрагента; лицензия не нужна.</p><div class="rtags"><span class="rtag">Права: <b>Таврида</b></span><span class="rtag">Товар: <b>контрагент</b></span><span class="rtag">Доход: <b>за работы</b></span></div><ul class="rdocs"><li>Договор с дизайнером (отчуждение Тавриде)</li><li>Договор на производство дизайна и брендированной продукции (2 этапа)</li></ul><div class="rparties"><span class="rh">Стороны и роли</span><div><b>Таврида</b> (заказчик) ↔ <b>Дизайнер</b> (автор)</div><div><b>Таврида</b> (подрядчик) ↔ <b>Контрагент</b> (заказчик)</div></div></article>
+      <article class="rcard"><div class="rn">03</div><h3>Лицензионная модель</h3><p class="rsub">Таврида сохраняет права и одним договором создаёт дизайн, изготавливает продукцию и предоставляет лицензию. Простая — можно лицензировать и другим. Исключительная — без права самостоятельного использования Тавридой на срок, с лимитом на производство контрагентом (ст. 1236 п. 1.1).</p><div class="rtags"><span class="rtag">Права: <b>Таврида</b></span><span class="rtag">Лицензия: <b>простая / исключительная</b></span><span class="rtag">Доход: <b>работы + роялти</b></span></div><ul class="rdocs"><li>Договор с дизайнером (отчуждение Тавриде)</li><li>Договор на производство дизайна с лицензией (простой или исключительной) и брендированной продукции — в 2 этапа</li></ul><div class="rparties"><span class="rh">Стороны и роли</span><div><b>Таврида</b> (заказчик) ↔ <b>Дизайнер</b> (автор)</div><div><b>Таврида</b> (подрядчик, лицензиар) ↔ <b>Контрагент</b> (заказчик, лицензиат)</div></div></article>
+      <article class="rcard"><div class="rn">04</div><h3>Таврида продаёт мерч контрагента</h3><p class="rsub">Агентская схема. При продажах 1 000 000 ₽ и комиссии 15% доход Тавриды — 150 000 ₽.</p><div class="rtags"><span class="rtag">Права: <b>любые</b></span><span class="rtag">Товар: <b>контрагент</b></span><span class="rtag">Продажи: <b>Таврида</b></span></div><ul class="rdocs"><li>Агентский договор на реализацию</li></ul><div class="rparties"><span class="rh">Стороны и роли</span><div><b>Таврида</b> (агент) ↔ <b>Контрагент</b> (принципал)</div></div></article>
+      <article class="rcard"><div class="rn">05</div><h3>Совместная продажа · совместный проект</h3><p class="rsub">Стороны определяют общий тираж; каждая за свой счёт изготавливает и продаёт свою часть продукции.</p><div class="rtags"><span class="rtag">Права: <b>Таврида / совм.</b></span><span class="rtag">Товар: <b>каждый свой</b></span></div><ul class="rdocs"><li>Договор с дизайнером (создание дизайна, распределение прав)</li><li>Соглашение о совместном проведении проекта</li><li>Договор на производство (у каждой стороны — свой)</li></ul><div class="rparties"><span class="rh">Стороны и роли</span><div><b>Таврида</b> ↔ <b>Контрагент</b> (стороны совместного проекта)</div><div>каждая сторона (заказчик) ↔ свой изготовитель (подрядчик)</div></div></article>
+      <article class="rcard"><div class="rn">+</div><h3>Совместное владение правами</h3><p class="rsub">Полноценная коллаборация: исключительное право возникает у обеих сторон.</p><div class="rtags"><span class="rtag">Права: <b>совместно</b></span><span class="rtag">Минус: <b>согласование</b></span></div><ul class="rdocs"><li>Соглашение о совместном проекте</li><li>Договор авторского заказа (в пользу обеих сторон)</li><li>Соглашение о порядке распоряжения</li></ul><div class="rparties"><span class="rh">Стороны и роли</span><div><b>Таврида</b> и <b>Контрагент</b> (заказчики) ↔ <b>Дизайнер</b> (автор)</div><div><b>Таврида</b> ↔ <b>Контрагент</b> (сообладатели права)</div></div></article>
+    </div>
+  </section>
+
+  <!-- ===================== MATRIX ===================== -->
+  <section class="sec page" id="matrix" role="tabpanel" aria-labelledby="tab-matrix" tabindex="0">
+    <div class="sec-head"><div><h2>Матрица всех комбинаций</h2><p>Все допустимые сочетания трёх вопросов и итоговая модель. Таблица строится той же логикой, что и «Карта».</p></div></div>
+    <div class="mtx-wrap">
+      <table class="mtx-table">
+        <thead><tr><th>№</th><th>Права на дизайн</th><th>Тираж</th><th>Продажи</th><th>Итоговая модель</th><th>Доход Тавриды</th><th>Договоры</th></tr></thead>
+        <tbody id="mtx-body"></tbody>
+      </table>
+    </div>
+    <p class="calc-note">Наведите на число в колонке «Договоры», чтобы увидеть список. Матрица отражает текущую правовую логику карты — при изменении сценариев обновляется автоматически.</p>
+  </section>
+
+  <!-- ===================== FINANCE ===================== -->
+  <section class="sec page" id="finance" role="tabpanel" aria-labelledby="tab-finance" tabindex="0">
+    <div class="sec-head"><div><h2>Финансовое сравнение</h2><p>Условный расчёт с НДС. Меняйте параметры — таблица пересчитает, какой вариант выгоднее для Тавриды.</p></div></div>
+    <div class="calc">
+      <div class="calc-inputs">
+        <label>Себестоимость тиража, ₽<input id="ci-cost" type="number" value="500000" min="0" step="10000"></label>
+        <label>Выручка от продажи, ₽<input id="ci-rev" type="number" value="1000000" min="0" step="10000"></label>
+        <label>Комиссия агента, %<input id="ci-comm" type="number" value="10" min="0" step="1"></label>
+        <label>Роялти, % от выручки<input id="ci-roy" type="number" value="25" min="0" step="1"></label>
+        <label>Наценка на производство, %<input id="ci-mark" type="number" value="30" min="0" step="1"></label>
+        <label>Ставка НДС, %<input id="ci-vat" type="number" value="22" min="0" step="1"></label>
+      </div>
+      <div class="calc-tablewrap">
+        <table class="calc-table">
+          <thead><tr><th>Модель</th><th>Поступления</th><th>Затраты</th><th>НДС к уплате</th><th>Чистый доход</th></tr></thead>
+          <tbody id="calc-body"></tbody>
+        </table>
+      </div>
+      <div class="calc-winner" id="calc-winner"></div>
+      <p class="calc-note">Иллюстративно, по ОСН с НДС. Поступления и затраты — с НДС; НДС к уплате = (поступления − затраты) × ставка/(100+ставка); чистый доход = (поступления − затраты) без НДС. Налог на прибыль, УСН и страховые взносы здесь не учитываются.</p>
+    </div>
+  </section>
+
+  <!-- ===================== LEGAL BASIS ===================== -->
+  <section class="sec page" id="basis" role="tabpanel" aria-labelledby="tab-basis" tabindex="0">
+    <div class="sec-head"><div><h2>Правовая основа</h2><p>Инструменты и нормы, на которых строятся модели (ГК РФ, часть четвёртая).</p></div></div>
+    <div class="gloss" style="margin-top:18px">
+      <div class="gitem"><h4>Дизайн как объект ИС <span class="art">ст. 1259, 1270</span></h4><p>Дизайн мерча — произведение, охраняется авторским правом с момента создания. Производство тиража = воспроизведение, требует прав или лицензии.</p></div>
+      <div class="gitem"><h4>Служебное произведение <span class="art">ст. 1295</span></h4><p>Если дизайнер — штатный сотрудник, исключительное право по умолчанию у работодателя (с выплатой автору вознаграждения).</p></div>
+      <div class="gitem"><h4>Договор авторского заказа <span class="art">ст. 1288</span></h4><p>Заказ дизайнеру со стороны. Можно сразу предусмотреть отчуждение исключительного права либо предоставление лицензии заказчику.</p></div>
+      <div class="gitem"><h4>Отчуждение права <span class="art">ст. 1234</span></h4><p>Полная и безвозвратная передача исключительного права. Так право на дизайн «приходит» к Тавриде или к контрагенту.</p></div>
+      <div class="gitem"><h4>Лицензионный договор <span class="art">ст. 1235</span></h4><p>Право использования без передачи самого права. По умолчанию: срок 5 лет, территория РФ, договор возмезден (безвозмездность — только прямо в тексте).</p></div>
+      <div class="gitem"><h4>Виды лицензий <span class="art">ст. 1236</span></h4><p>Простая — лицензиар вправе выдавать её и другим. Исключительная — только одному лицензиату; <b>при этом сам лицензиар теряет право использования в этих пределах, если иное прямо не указано (п. 1.1).</b></p></div>
+      <div class="gitem"><h4>Совместное обладание <span class="art">ст. 1229 п. 3, 1258</span></h4><p>Право принадлежит сторонам совместно. Распоряжение — по общему согласию, доходы — поровну, если не договорились иначе.</p></div>
+      <div class="gitem"><h4>Агентский договор <span class="art">ст. 1005</span></h4><p>Таврида реализует чужой товар за вознаграждение. От своего имени — модель комиссии (Таврида в расчётах с покупателем).</p></div>
+    </div>
+    <div class="tmnote">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--seal)" stroke-width="2"><path d="M12 2l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.5-4.8 2.5.9-5.4-3.9-3.8 5.4-.8z"/></svg>
+      <div><h4>Отдельно про товарный знак</h4><p>Если мерч несёт бренд, логотип или иное обозначение «Тавриды» — права на дизайн и права на товарный знак не одно и то же. Даже когда права на дизайн уходят контрагенту, использование товарного знака требует отдельной лицензии <span class="art">(ст. 1489)</span> или договора коммерческой концессии <span class="art">(ст. 1027)</span>.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    <b>ArtallRights Studio</b>
+  </footer>
+
+</div>
+
+<script>
+/* ---------- tree data ---------- */
+const TREES = {
+  q1:{kind:'q',root:true,label:'Права на дизайн?',children:[
+    {kind:'branch',party:'t',tag:'Таврида',label:'Тавриде',children:[
+      {kind:'q',label:'Как контрагент получает продукцию?',children:[
+        {kind:'leaf',party:'t',tag:'Сценарий №2',label:'Таврида изготавливает и передаёт товар',sub:'подряд, без лицензии',picks:{rights:'tavrida',license:'produce'}},
+        {kind:'leaf',party:'t',tag:'Сценарий №3',label:'Таврида изготавливает + простая лицензия',sub:'подряд + неисключит. лицензия',picks:{rights:'tavrida',license:'simple'}},
+        {kind:'leaf',party:'t',tag:'Сценарий №3',label:'Контрагент производит по исключит. лицензии',sub:'эксклюзив на период',picks:{rights:'tavrida',license:'exclusive'}}
+      ]}
+    ]},
+    {kind:'branch',party:'c',tag:'Контрагент',label:'Контрагенту',children:[
+      {kind:'q',label:'Как Таврида участвует и зарабатывает?',children:[
+        {kind:'leaf',party:'c',tag:'Сценарий №1',label:'Разработка дизайна с отчуждением',sub:'права через Тавриду → контрагенту',picks:{rights:'contra',role:'design'}},
+        {kind:'leaf',party:'c',tag:'Сценарий №1',label:'Агент контрагента',sub:'от своего имени за счёт контрагента',picks:{rights:'contra',role:'agent'}}
+      ]}
+    ]},
+    {kind:'branch',party:'b',tag:'Совместно',label:'Обеим сторонам',children:[
+      {kind:'leaf',party:'b',tag:'Коллаборация',label:'Совместное владение',sub:'ст. 1229 п. 3',picks:{rights:'both'}}
+    ]}
+  ]},
+  q2:{kind:'q',root:true,label:'Владелец тиража?',children:[
+    {kind:'leaf',party:'c',tag:'B2B',label:'Контрагент',sub:'весь тираж',picks:{goods:'contra'}},
+    {kind:'leaf',party:'b',tag:'Совместный проект',label:'Каждый — свою часть',sub:'свой счёт, своя продукция',picks:{goods:'split'}}
+  ]},
+  q3:{kind:'q',root:true,label:'Кто продаёт?',children:[
+    {kind:'leaf',party:'c',tag:'Просто',label:'Контрагент сам',sub:'доп. договоров нет',picks:{sales:'contra'}},
+    {kind:'leaf',party:'t',tag:'Агент',label:'Таврида продаёт товар контрагента',sub:'агентский договор',picks:{sales:'tavrida_agent'}},
+    {kind:'leaf',party:'b',tag:'Поровну',label:'Каждый свою часть',sub:'совместный проект',picks:{sales:'each'}}
+  ]}
+};
+const OWNS = {q1:['rights','license','role'], q2:['goods'], q3:['sales']};
+
+let state = {};
+let chosen = {q1:false,q2:false,q3:false};
+
+/* ---------- render ---------- */
+let uid=0;
+function renderNode(n, map){
+  const id = 'n'+(uid++);
+  let cls = 'node';
+  if(n.root) cls+=' root';
+  else if(n.kind==='q') cls+=' q';
+  else if(n.kind==='branch') cls+=' branch '+n.party;
+  else if(n.kind==='leaf') cls+=' leaf '+n.party;
+  const tagCls = n.root ? 'q' : (n.party||'q');
+  const attrs = n.kind==='leaf'
+    ? `data-leaf='${JSON.stringify(n.picks)}' data-map='${map}' tabindex="0" role="button" aria-label="Выбрать: ${n.label}"` : '';
+  let h = `<li><div class="${cls}" id="${id}" ${attrs}>`;
+  if(n.tag) h += `<span class="ntag ${tagCls}">${n.tag}</span>`;
+  h += `<span class="nlabel">${n.label}</span>`;
+  if(n.sub) h += `<span class="nsub">${n.sub}</span>`;
+  h += `</div>`;
+  if(n.children && n.children.length) h += '<ul>'+n.children.map(c=>renderNode(c,map)).join('')+'</ul>';
+  h += '</li>';
+  return h;
+}
+function buildTree(map){
+  document.getElementById('tree-'+map).innerHTML =
+    '<svg class="links" xmlns="http://www.w3.org/2000/svg"></svg><ul>'+renderNode(TREES[map], map)+'</ul>';
+}
+['q1','q2','q3'].forEach(buildTree);
+
+/* ---------- connector lines (computed from real node positions) ---------- */
+const activeIds = {q1:new Set(), q2:new Set(), q3:new Set()};
+function drawLinks(map){
+  const tree = document.getElementById('tree-'+map);
+  if(!tree || tree.offsetWidth===0) return;   // skip hidden steps
+  const svg = tree.querySelector('svg.links');
+  const W = tree.scrollWidth, H = tree.scrollHeight;
+  svg.setAttribute('width', W); svg.setAttribute('height', H);
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const tr = tree.getBoundingClientRect();
+  const segs = [];
+  tree.querySelectorAll('li').forEach(li=>{
+    const childUl = li.querySelector(':scope > ul'); if(!childUl) return;
+    const pNode = li.querySelector(':scope > .node'); if(!pNode) return;
+    const pr = pNode.getBoundingClientRect();
+    const px = pr.left + pr.width/2 - tr.left, py = pr.bottom - tr.top;
+    childUl.querySelectorAll(':scope > li > .node').forEach(cNode=>{
+      const cr = cNode.getBoundingClientRect();
+      const cx = cr.left + cr.width/2 - tr.left, cy = cr.top - tr.top;
+      const on = activeIds[map].has(pNode.id) && activeIds[map].has(cNode.id);
+      const my = (py + cy)/2;
+      segs.push({px,py,cx,cy,my,on});
+    });
+  });
+  // inactive first, active on top
+  segs.sort((a,b)=>a.on-b.on);
+  svg.innerHTML = segs.map(s=>
+    `<path d="M${s.px} ${s.py} C ${s.px} ${s.my} ${s.cx} ${s.my} ${s.cx} ${s.cy}" fill="none" stroke="${s.on?'#9C6B1E':'#D8DEE6'}" stroke-width="${s.on?2.5:2}" stroke-linecap="round"/>`
+  ).join('');
+}
+
+/* ---------- gating: владелец тиража (Q2) определяет, кто может продавать (Q3) ---------- */
+const VALID = {
+  contra:  {contra:true,  tavrida_agent:true,  each:false},
+  split:   {contra:false, tavrida_agent:false, each:true}
+};
+function clearTree(map){
+  const tree=document.getElementById('tree-'+map);
+  tree.querySelectorAll('.node').forEach(x=>x.classList.remove('sel','on','dim'));
+  activeIds[map].clear(); drawLinks(map);
+  OWNS[map].forEach(k=>delete state[k]); chosen[map]=false;
+  const l=document.getElementById('pick-'+map); l.textContent='не выбрано'; l.classList.remove('set');
+}
+function applyGates(){
+  const g=state.goods;
+  document.querySelectorAll('#tree-q3 .node.leaf').forEach(el=>{
+    const s=JSON.parse(el.dataset.leaf).sales;
+    const ok = !g || !VALID[g] ? true : !!VALID[g][s];
+    el.classList.toggle('disabled', !ok);
+    if(!ok){ el.setAttribute('aria-disabled','true'); el.setAttribute('tabindex','-1'); }
+    else { el.removeAttribute('aria-disabled'); el.setAttribute('tabindex','0'); }
+  });
+  if(g && VALID[g] && state.sales && !VALID[g][state.sales]) clearTree('q3');
+}
+
+/* ---------- interaction ---------- */
+document.querySelectorAll('.node.leaf').forEach(el=>{
+  el.addEventListener('click',()=>selectLeaf(el));
+  el.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){e.preventDefault(); selectLeaf(el);} });
+});
+
+function selectLeaf(el){
+  if(el.classList.contains('disabled')) return;
+  const map = el.dataset.map;
+  const picks = JSON.parse(el.dataset.leaf);
+  const tree = document.getElementById('tree-'+map);
+  tree.querySelectorAll('.node').forEach(x=>x.classList.remove('sel','on','dim'));
+  activeIds[map].clear();
+  let li = el.closest('li');
+  el.classList.add('sel');
+  while(li && tree.contains(li)){
+    const node = li.querySelector(':scope > .node');
+    if(node){ node.classList.add('on'); activeIds[map].add(node.id); }
+    li = li.parentElement ? li.parentElement.closest('li') : null;
+  }
+  tree.querySelectorAll('.node:not(.on)').forEach(x=>x.classList.add('dim'));
+  drawLinks(map);
+  OWNS[map].forEach(k=>delete state[k]);
+  Object.assign(state, picks);
+  chosen[map]=true;
+  updatePickLabel(map, el);
+  applyGates();
+  // auto-advance to the next step (q1→q2→q3→заключение)
+  const idx = STEP_MAP.indexOf(map);
+  showStep(idx+1);
+}
+
+function updatePickLabel(map, el){
+  const lbl = document.getElementById('pick-'+map);
+  const tag = el.querySelector('.nlabel').textContent;
+  lbl.textContent = '✓ '+tag;
+  lbl.classList.add('set');
+}
+
+/* ---------- derive (same legal logic) ---------- */
+function derive(){
+  const r=state.rights, lic=state.license, role=state.role, g=state.goods, s=state.sales;
+  const docs=[]; const notes=[]; let model="", roleT="";
+  if(r==="tavrida") docs.push(["Договор с дизайнером — авторский заказ с отчуждением исключительного права Тавриде (или служебное произведение, если дизайнер штатный)","ст. 1288, 1234, 1295","Таврида (заказчик) ↔ Дизайнер (автор)"]);
+  else if(r==="both") docs.push(["Договор с дизайнером — авторский заказ в пользу обеих сторон (совместное обладание)","ст. 1288, 1229 п. 3","Таврида и Контрагент (заказчики) ↔ Дизайнер (автор)"]);
+  // r==="contra": документы зависят от роли Тавриды (см. блок role ниже)
+  if(r==="tavrida"){
+    if(lic==="produce") notes.push("Лицензия контрагенту не нужна: Таврида сама изготавливает брендированную продукцию и передаёт готовый товар. Контрагент становится собственником этих экземпляров и вправе их перепродавать (исчерпание права — ст. 1272). Дизайн остаётся за Тавридой для будущего использования.");
+    if(lic==="simple"){
+      notes.push("Простая (неисключительная) лицензия: Таврида сохраняет право выдавать такие же лицензии другим лицам и использовать дизайн сама (ст. 1236). Предоставление лицензии включено в договор на производство дизайна и продукции.");
+    }
+    if(lic==="exclusive"){
+      notes.push("По факту исключительное право принадлежит Тавриде; контрагенту предоставляется исключительная лицензия без права самостоятельного использования Тавридой на определённый срок (п. 1.1 ст. 1236).");
+      notes.push("Лицензионным соглашением предусмотрен определённый лимит на производство продукции контрагентом.");
+      notes.push("После исчерпания лимита контрагент производит продукцию только при условии согласования с Тавридой.");
+    }
+  }
+  if(r==="contra"){
+    if(role==="agent"){
+      docs.push(["Агентский договор с контрагентом — Таврида действует от своего имени, но за счёт контрагента","ст. 1005, 1011","Таврида (агент) ↔ Контрагент (принципал)"]);
+      docs.push(["Договор с дизайнером, заключаемый Тавридой как агентом контрагента (права переходят к контрагенту)","ст. 1288, 1005","Таврида (агент контрагента) ↔ Дизайнер (автор)"]);
+      docs.push(["Договор на производство продукции, заключаемый Тавридой как агентом контрагента (от своего имени, за счёт контрагента)","гл. 37, 30; ст. 1005","Таврида (агент) ↔ изготовитель (подрядчик)"]);
+      notes.push("Договор на производство должен включать разрешение изготовителю на воспроизведение дизайна (ст. 1270) — иначе изготовление тиража нарушает исключительное право.");
+    } else {
+      docs.push(["Договор с дизайнером — авторский заказ с отчуждением исключительного права Тавриде (или служебное произведение)","ст. 1288, 1234, 1295","Таврида (заказчик) ↔ Дизайнер (автор)"]);
+      docs.push(["Договор на производство дизайна с отчуждением исключительных прав контрагенту, изготовлением и брендированной продукции (подряд / поставка) — в два этапа: 1) создание и согласование дизайна с контрагентом, 2) изготовление продукции","ст. 1234, 1288; гл. 37, 30","Таврида (подрядчик, отчуждает права) ↔ Контрагент (заказчик, приобретатель прав)"]);
+    }
+  }
+  if(r==="both"){
+    docs.push(["Соглашение о совместном владении и порядке распоряжения правом","ст. 1229 п. 3, 1258","Таврида ↔ Контрагент (сообладатели права)"]);
+    notes.push("При совместном владении любое распоряжение правом и выдача лицензий требуют согласия обеих сторон; распределение доходов закрепите в соглашении.");
+  }
+  if(r==="tavrida" && lic==="produce"){
+    docs.push(["Договор на производство дизайна и брендированной продукции (подряд / поставка) — в два этапа: 1) создание и согласование дизайна с контрагентом, 2) изготовление продукции","гл. 37, 30","Таврида (подрядчик) ↔ Контрагент (заказчик)"]);
+    notes.push("Если Таврида не изготавливает продукцию сама, она привлекает изготовителя по субподряду (Таврида — заказчик ↔ изготовитель — подрядчик), но перед контрагентом остаётся подрядчиком.");
+  } else if(r==="tavrida" && lic==="simple"){
+    docs.push(["Договор на производство дизайна с предоставлением простой (неисключительной) лицензии и брендированной продукции (подряд / поставка) — в два этапа: 1) создание и согласование дизайна с контрагентом, 2) изготовление продукции","ст. 1235, 1236; гл. 37, 30","Таврида (подрядчик, лицензиар) ↔ Контрагент (заказчик, лицензиат)"]);
+  } else if(r==="tavrida" && lic==="exclusive"){
+    docs.push(["Договор на производство дизайна с предоставлением исключительной лицензии и брендированной продукции (подряд / поставка) — в два этапа: 1) создание и согласование дизайна с контрагентом, 2) изготовление продукции","ст. 1235, 1236; гл. 37, 30","Таврида (подрядчик, лицензиар) ↔ Контрагент (заказчик, лицензиат)"]);
+  } else if(r!=="contra"){
+    const prodParties = (g==="split" || s==="each") ? "Каждая сторона (заказчик) ↔ свой изготовитель (подрядчик)"
+                      : "Заказчик ↔ изготовитель (подрядчик)";
+    docs.push(["Договор на производство продукции (подряд / поставка)","гл. 37, 30",prodParties]);
+    notes.push("Договор на производство должен включать разрешение изготовителю на воспроизведение дизайна (ст. 1270) — иначе изготовление тиража нарушает исключительное право.");
+  }
+  if(g==="split" || s==="each"){
+    docs.push(["Соглашение о совместном проведении проекта — стороны определяют общий тираж; каждая сторона за свой счёт изготавливает и продаёт свою часть продукции","ст. 421, 218","Таврида ↔ Контрагент (стороны совместного проекта)"]);
+    notes.push("Это не «раздел» единого тиража: каждая сторона финансирует и заказывает свою часть и становится её собственником (ст. 218), поэтому продаёт её самостоятельно. Простое товарищество (гл. 55) здесь не подходит — оно создаёт общую собственность.");
+  }
+  if(s==="tavrida_agent") docs.push(["Агентский договор на реализацию продукции контрагента","ст. 1005","Таврида (агент) ↔ Контрагент (принципал)"]);
+  notes.push("Если мерч несёт товарный знак Тавриды — нужна отдельная лицензия на товарный знак (ст. 1489) или договор коммерческой концессии (ст. 1027), независимо от того, у кого права на дизайн.");
+
+  let control, income, risk, fin, incomeSrc;
+  if(s==="tavrida_agent"){
+    model="Сценарий №4 · Таврида продаёт мерч контрагента"; roleT="Агент";
+    incomeSrc="Агентское вознаграждение (комиссия с продаж)";
+    control = r==="tavrida"?90:(r==="both"?55:15); income=55; risk=25;
+    fin={title:"Агентская схема (комиссия 10% — условно)",rows:[["Продажи","1 000 000 ₽"],["Комиссия Тавриды","10%"]],tot:["Доход Тавриды","100 000 ₽"]};
+  } else if(g==="split" || s==="each"){
+    model="Сценарий №5 · Совместная продажа (совместный проект)"; roleT="Продавец своей части продукции";
+    incomeSrc="Прибыль от реализации своей части продукции";
+    control = r==="tavrida"?90:(r==="both"?60:25); income=95; risk=70;
+    fin={title:"Совместный проект · доля Тавриды 50 ед.",rows:[["Себестоимость своей части","250 000 ₽"],["Выручка","500 000 ₽"]],tot:["Валовая прибыль","250 000 ₽"]};
+  } else if(r==="tavrida" && lic==="exclusive"){
+    model="Сценарий №3 · Эксклюзивная коллаборация"; roleT="Правообладатель · исключит. лицензия"; control=100; income=70; risk=35;
+    incomeSrc="Лицензионные платежи (роялти) за право использования дизайна";
+    fin={title:"Лицензия (роялти)",rows:[["Лицензионный платёж (роялти)","150 000 ₽"],["Услуги по согласованию","100 000 ₽"]],tot:["Доход Тавриды","250 000 ₽"]};
+  } else if(r==="tavrida" && lic==="simple"){
+    model="Сценарий №3 · Простая (неисключительная) лицензия"; roleT="Правообладатель · подрядчик · лицензиар"; control=95; income=65; risk=28;
+    incomeSrc="Вознаграждение за работы по производству и роялти (простая лицензия)";
+    fin={title:"Производство + простая лицензия",rows:[["Вознаграждение за работы","100 000 ₽"],["Роялти (простая лицензия)","условно"]],tot:["Доход Тавриды","работы + роялти"]};
+  } else if(r==="tavrida" && lic==="produce"){
+    model="Сценарий №2 · Таврида сохраняет права на дизайн"; roleT="Правообладатель · исполнитель работ"; control=100; income=50; risk=25;
+    incomeSrc="Вознаграждение за работы по производству продукции";
+    fin={title:"Производство для контрагента (подряд)",rows:[["Работы по производству","100 000 ₽"],["Лицензионный платёж","не требуется"]],tot:["Доход Тавриды","100 000 ₽"]};
+  } else if(r==="both"){
+    model="Совместное владение правами"; roleT="Совладелец исключительного права"; control=55; income=70; risk=55;
+    incomeSrc="По соглашению сторон: роялти и/или доля прибыли";
+    fin={title:"Доходы — по соглашению сторон",rows:[["Распределение","по договорённости"],["По умолчанию","поровну"]],tot:["Контроль","совместный"]};
+  } else if(r==="contra" && role==="agent"){
+    model="Сценарий №1 · Агентская модель"; roleT="Агент контрагента (от своего имени, за его счёт)"; control=15; income=35; risk=20;
+    incomeSrc="Агентское вознаграждение (агент от своего имени за счёт контрагента)";
+    fin={title:"Агентская модель (условно)",rows:[["Бюджет проекта","условно"],["Агентское вознаграждение","% от бюджета"]],tot:["Доход Тавриды","агентская комиссия"]};
+  } else {
+    model="Сценарий №1 · Разработка дизайна с отчуждением"; roleT="Подрядчик · разработчик дизайна (передаёт права)"; control=20; income=45; risk=20;
+    incomeSrc="Вознаграждение за разработку дизайна с отчуждением прав и за работы по производству";
+    fin={title:"Разработка с отчуждением + производство",rows:[["Разработка дизайна и отчуждение прав","100 000 ₽"],["Работы по производству","условно"]],tot:["Доход Тавриды","работы"]};
+  }
+  return {model, roleT, incomeSrc, docs, notes, control, income, risk, fin};
+}
+
+function meter(label, val, color){
+  return `<div class="meter"><div class="ml"><span>${label}</span><b>${val}%</b></div><div class="track" role="presentation" aria-hidden="true"><i style="width:${val}%;background:${color}"></i></div></div>`;
+}
+
+function updateResult(){
+  if(!(chosen.q1 && chosen.q2 && chosen.q3)) return;
+  const R = derive();
+  document.getElementById("vmodel").textContent = R.model;
+  document.getElementById("vrole").textContent = R.roleT;
+  document.getElementById("vincome").textContent = R.incomeSrc;
+  document.getElementById("vdocs").innerHTML = R.docs.map(d=>`<li><span class="ck"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5 9-11"/></svg></span><span class="dx">${d[0]}${d[1]&&d[1]!=="—"?`<span class="da">${d[1]}</span>`:""}${d[2]?`<span class="dp"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.2"/><path d="M4 19c0-2.8 2.2-5 5-5s5 2.2 5 5M15 14.5c2.3.2 4 1.9 4 4.5"/></svg>Стороны: ${d[2]}</span>`:""}</span></li>`).join("");
+  document.getElementById("vmeters").innerHTML = meter("Контроль над дизайном", R.control, "var(--tavrida)") + meter("Потенциал дохода", R.income, "var(--both)") + meter("Уровень риска", R.risk, "var(--contra)");
+  const f=R.fin;
+  document.getElementById("vfin").innerHTML = `<h4>${f.title} · условно</h4>` + f.rows.map(r=>`<div class="row"><span>${r[0]}</span><span class="v">${r[1]}</span></div>`).join("") + `<div class="row tot"><span>${f.tot[0]}</span><span class="v">${f.tot[1]}</span></div>`;
+  document.getElementById("vnotes").innerHTML = R.notes.map(n=>`<div class="note"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--seal)" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 7v6M12 16.5v.5"/></svg><span>${n}</span></div>`).join("");
+}
+
+/* ---------- stepper ---------- */
+const STEP_MAP = ['q1','q2','q3'];
+let step = 0;
+function showStep(n, scroll=true){
+  step = Math.max(0, Math.min(3, n));
+  document.querySelectorAll('#stage .step').forEach(el=>el.classList.toggle('on', +el.dataset.step===step));
+  document.querySelectorAll('.st').forEach(s=>{ const i=+s.dataset.i; s.classList.toggle('active', i===step); s.classList.toggle('done', i<step); });
+  document.getElementById('backStep').disabled = (step===0);
+  const next = document.getElementById('nextStep');
+  if(step===3){ next.style.display='none'; }
+  else { next.style.display=''; next.disabled = !chosen[STEP_MAP[step]]; }
+  if(step<3){ requestAnimationFrame(()=>drawLinks(STEP_MAP[step])); }
+  else { updateResult(); }
+  if(scroll) document.getElementById('map').scrollIntoView({behavior:'smooth',block:'start'});
+}
+document.getElementById('backStep').addEventListener('click',()=>showStep(step-1));
+document.getElementById('nextStep').addEventListener('click',()=>{ if(chosen[STEP_MAP[step]]) showStep(step+1); });
+
+/* ---------- tabs / pages ---------- */
+document.querySelectorAll('.tab').forEach(t=>t.addEventListener('click',()=>{
+  document.querySelectorAll('.tab').forEach(x=>{ x.classList.toggle('active', x===t); x.setAttribute('aria-selected', x===t?'true':'false'); });
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active', p.id===t.dataset.page));
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(t.dataset.page==='map' && step<3) requestAnimationFrame(()=>drawLinks(STEP_MAP[step]));
+}));
+
+/* ---------- reset ---------- */
+document.getElementById('resetMap').addEventListener('click',()=>{
+  state={}; chosen={q1:false,q2:false,q3:false};
+  document.querySelectorAll('.node').forEach(x=>x.classList.remove('sel','on','dim'));
+  ['q1','q2','q3'].forEach(m=>activeIds[m].clear());
+  ['q1','q2','q3'].forEach(m=>{const l=document.getElementById('pick-'+m); l.textContent='не выбрано'; l.classList.remove('set');});
+  applyGates();
+  showStep(0);
+});
+
+/* ---------- matrix: все комбинации, генерируется тем же derive() ---------- */
+function buildMatrix(){
+  const body=document.getElementById('mtx-body'); if(!body) return;
+  const leaves=tree=>[...document.querySelectorAll('#tree-'+tree+' .node.leaf')].map(el=>({label:el.querySelector('.nlabel').textContent.trim(),picks:JSON.parse(el.dataset.leaf)}));
+  const q1=leaves('q1'), q2=leaves('q2'), q3=leaves('q3');
+  const saved=Object.assign({},state);
+  let html='', n=0, prev=null;
+  q1.forEach(a=>q2.forEach(b=>q3.forEach(c=>{
+    const g=b.picks.goods, s=c.picks.sales;
+    if(!(VALID[g] && VALID[g][s])) return;
+    for(const k in state) delete state[k];
+    Object.assign(state, a.picks, b.picks, c.picks);
+    const R=derive(); n++;
+    const titles=R.docs.map(d=>d[0]).join(' · ').replace(/"/g,'&quot;');
+    const grp=(prev!==null && prev!==a.label)?' class="mtx-rowgroup"':''; prev=a.label;
+    html+=`<tr${grp}><td class="mx-num">${n}</td><td>${a.label}</td><td>${b.label}</td><td>${c.label}</td><td class="mx-model">${R.model}</td><td>${R.incomeSrc}</td><td><span class="mx-docs" title="${titles}">${R.docs.length} дог.</span></td></tr>`;
+  })));
+  for(const k in state) delete state[k]; Object.assign(state, saved);
+  body.innerHTML=html;
+}
+buildMatrix();
+
+/* ---------- finance calculator ---------- */
+function fmt(n){ return Math.round(n).toLocaleString('ru-RU')+' ₽'; }
+function calcFinance(){
+  const num=id=>parseFloat(document.getElementById(id).value)||0;
+  const cost=num('ci-cost'), rev=num('ci-rev'), comm=num('ci-comm')/100, roy=num('ci-roy')/100, mark=num('ci-mark')/100, vat=num('ci-vat')/100;
+  const rows=[
+    {name:'Агентская (№4)', sub:'комиссия с продаж', receipts:rev*comm, costs:0},
+    {name:'Лицензионная (№3)', sub:'роялти с выручки', receipts:rev*roy, costs:0},
+    {name:'Производство (№2)', sub:'подряд с наценкой', receipts:cost*(1+mark), costs:cost},
+    {name:'Совместная (№5)', sub:'своя часть тиража', receipts:rev/2, costs:cost/2},
+  ].map(r=>{
+    const margin=r.receipts-r.costs;
+    const vatPay=vat>0?margin*vat/(1+vat):0;
+    const net=margin-vatPay;
+    return {...r, vatPay, net};
+  });
+  const max=Math.max(...rows.map(r=>r.net));
+  const body=document.getElementById('calc-body');
+  body.innerHTML=rows.map(r=>{
+    const best=Math.abs(r.net-max)<1;
+    return `<tr class="${best?'best':''}"><td><span class="mname">${r.name}</span><br><small style="color:var(--ink-soft)">${r.sub}</small></td><td>${fmt(r.receipts)}</td><td>${fmt(r.costs)}</td><td>${fmt(r.vatPay)}</td><td class="net">${fmt(r.net)}</td></tr>`;
+  }).join('');
+  const winners=rows.filter(r=>Math.abs(r.net-max)<1).map(r=>r.name);
+  document.getElementById('calc-winner').innerHTML = winners.length>1
+    ? `Сопоставимо выгодны: <b>${winners.join(' и ')}</b> — чистый доход ≈ <b>${fmt(max)}</b> при текущих параметрах.`
+    : `Выгоднее всего: <b>${winners[0]}</b> — чистый доход <b>${fmt(max)}</b> при текущих параметрах.`;
+}
+['ci-cost','ci-rev','ci-comm','ci-roy','ci-mark','ci-vat'].forEach(id=>{
+  const el=document.getElementById(id); if(el) el.addEventListener('input', calcFinance);
+});
+calcFinance();
+
+let rT; function scheduleDraw(){ clearTimeout(rT); rT=setTimeout(()=>{ if(step<3) drawLinks(STEP_MAP[step]); },80); }
+window.addEventListener('load', ()=>{ if(step<3) drawLinks(STEP_MAP[step]); });
+window.addEventListener('resize', scheduleDraw);
+if(document.fonts && document.fonts.ready){ document.fonts.ready.then(()=>{ if(step<3) drawLinks(STEP_MAP[step]); }); }
+applyGates();
+showStep(0, false);
+
+</script>
+</body>
+</html>
